@@ -61,7 +61,8 @@
             // 
             this.comboLanguage.FormattingEnabled = true;
             this.comboLanguage.Items.AddRange(new object[] {
-            "C++"});
+            "C++",
+            "Python"});
             this.comboLanguage.Location = new System.Drawing.Point(31, 98);
             this.comboLanguage.Name = "comboLanguage";
             this.comboLanguage.Size = new System.Drawing.Size(216, 24);

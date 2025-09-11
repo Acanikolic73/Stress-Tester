@@ -42,51 +42,6 @@ namespace StressTester
 
         }
 
-        private string CompileCpp(string cppFile)
-        {
-            string exeFile = Path.ChangeExtension(cppFile, ".exe");
-            ProcessStartInfo processStartInfo = new ProcessStartInfo("g++", cppFile + " -o " + exeFile)
-            {
-                RedirectStandardError = true,
-                RedirectStandardInput = true,
-                RedirectStandardOutput = true,
-                CreateNoWindow = true,
-                UseShellExecute = false
-            };
-
-            using (Process process = Process.Start(processStartInfo))
-            {
-                string errors = process.StandardError.ReadToEnd();
-                process.WaitForExit();
-                if(!string.IsNullOrEmpty(errors))
-                {
-                    throw new Exception("Compalation errors:\n" + errors);
-                }
-            }
-            return exeFile;
-        }
-
-        private string RunProgram(string exePath, string input)
-        {
-            ProcessStartInfo processStartInfo = new ProcessStartInfo(exePath)
-            {
-                RedirectStandardError = true,
-                RedirectStandardInput = true,
-                RedirectStandardOutput = true,
-                CreateNoWindow = true,
-                UseShellExecute = false
-            };
-
-            using (Process process = Process.Start(processStartInfo))
-            {
-                process.StandardInput.WriteLine(input);
-                process.StandardInput.Close();
-                string output = process.StandardOutput.ReadToEnd();
-                process.WaitForExit();
-                return output.Trim();
-            }
-        }
-
         private string GenerateTestCase()
         {
             Random rnd = new Random();
@@ -99,6 +54,8 @@ namespace StressTester
             return testCase.Trim();
         }
 
+        Language test;
+
         private async Task StressTest(string bruteFile, string optimizedFile)
         {
             rtbOutput.ForeColor = Color.Gray;
@@ -107,8 +64,10 @@ namespace StressTester
                 //testing 100 inputs
                 AppendOutput("Running on test " + i + " ...\n");
                 string input = GenerateTestCase();
-                string outputBrute = await Task.Run(() => RunProgram(bruteFile, input));
-                string outputOpt = await Task.Run(() => RunProgram(optimizedFile, input));
+                string outputBrute = await Task.Run(() => test.Run(bruteFile, input));
+                string outputOpt = await Task.Run(() => test.Run(optimizedFile, input));
+                outputBrute = outputBrute.Trim();
+                outputOpt = outputOpt.Trim();
                 if(outputBrute != outputOpt)
                 {
                     rtbOutput.Clear();
@@ -127,6 +86,7 @@ namespace StressTester
         }
         private async void button1_Click(object sender, EventArgs e)
         {
+            rtbOutput.ForeColor = Color.Gray;
             rtbOutput.Clear();
             string bruteCode = rtbBrute.Text;     // Brute force code textbox
             string optCode = rtbOptimized.Text;   // Optimized code textbox
@@ -141,16 +101,41 @@ namespace StressTester
             try
             {
                 //make a temporary files brute and optimized
-                string bruteFile = Path.Combine(Path.GetTempPath(), "brute.cpp");
-                string optimizedFile = Path.Combine(Path.GetTempPath(), "opt.cpp");
+                string bruteFile;
+                string optimizedFile;
+
+                if(comboLanguage.Text == "C++")
+                {
+                    bruteFile = Path.Combine(Path.GetTempPath(), "brute.cpp");
+                    optimizedFile = Path.Combine(Path.GetTempPath(), "opt.cpp");
+                }
+                else if(comboLanguage.Text == "Python")
+                {
+                    bruteFile = Path.Combine(Path.GetTempPath(), "brute.py");
+                    optimizedFile = Path.Combine(Path.GetTempPath(), "opt.py");
+                }
+                else
+                {
+                    bruteFile = Path.Combine(Path.GetTempPath(), "brute.cpp");
+                    optimizedFile = Path.Combine(Path.GetTempPath(), "opt.cpp");
+                }
 
                 // write text in file
                 File.WriteAllText(bruteFile, bruteCode);
                 File.WriteAllText(optimizedFile, optCode);
 
                 //compile and convert to exe file 
-                string bruteExe = CompileCpp(bruteFile);
-                string optExe = CompileCpp(optimizedFile);
+                test = new CppRunner();
+                if(comboLanguage.Text == "C++")
+                {
+                    test = new CppRunner();
+                }
+                else if (comboLanguage.Text == "Python")
+                {
+                    test = new PythonRunner();
+                }
+                string bruteExe = test.Compile(bruteFile);
+                string optExe = test.Compile(optimizedFile);
 
                 await StressTest(bruteExe, optExe);
 
