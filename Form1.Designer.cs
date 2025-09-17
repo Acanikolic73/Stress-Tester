@@ -120,8 +120,10 @@
             // 
             // rtbOutput
             // 
+            this.rtbOutput.BackColor = System.Drawing.Color.White;
             this.rtbOutput.Location = new System.Drawing.Point(463, 200);
             this.rtbOutput.Name = "rtbOutput";
+            this.rtbOutput.ReadOnly = true;
             this.rtbOutput.Size = new System.Drawing.Size(294, 441);
             this.rtbOutput.TabIndex = 9;
             this.rtbOutput.Text = "";
