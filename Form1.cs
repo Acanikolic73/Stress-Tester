@@ -18,7 +18,7 @@ namespace StressTester
     {
 
         Random rnd = new Random(); // global for no repeating
-        Language test, randomGenerated;
+        Language language, randomGenerated;
 
         public Form1()
         {
@@ -47,116 +47,7 @@ namespace StressTester
 
         }
 
-        private string Get(string code)
-        {
-            string result = "";
-            result += "#include <bits/stdc++.h>\r\n";
-            result += "std::mt19937 rng(time(0));\r\n";
-            result += "int random() {\r\n";
-            result += "return rng() % 10;\r\n";
-            result += "}\n";
-            result += code;
-            return result;
-        }
-
-        private string ReverseCode(string code)
-        {
-            string result = "";
-            code = Get(code);
-            for(int i = 0; i < code.Length; i++)
-            {
-                if(i + 3 < code.Length)
-                {
-                    string substring = code.Substring(i, 4);
-                    bool Is = false;
-                    for (int j = i + 4; j < code.Length; j++)
-                    {
-                        if (code[j] == ' ') continue;
-                        if (code[j] == '<') Is = true;
-                        else break;
-                    }
-                    if (substring == "cout" && Is)
-                    {
-                        while (i < code.Length)
-                        {
-                            if (code[i] == ';')
-                            {
-                                i++;
-                                break;
-                            }
-                            i++;
-                        }
-                        continue;
-                    }
-                    else
-                    {
-                        goto here;
-                    }
-                }
-            here:
-                if (i + 2 < code.Length)
-                {
-                    string substring = code.Substring(i, 3);
-                    bool Is = false;
-                    for (int j = i + 3; j < code.Length; j++)
-                    {
-                        if (code[j] == ' ') continue;
-                        if (code[j] == '>') Is = true;
-                        else break;
-                    }
-                    if (substring == "cin" && Is)
-                    {
-                        i += 3;
-                        int cnt = 0;
-                        string var = "";
-                        while (i < code.Length)
-                        {
-                            if (code[i] == '>')
-                            {
-                                cnt++;
-                                if(cnt > 1 && cnt % 2 == 1)
-                                {
-                                    result += "cout << (" + var + "=random()) << ' ';\n";
-                                    var = "";
-                                }
-                            }
-                            else if (code[i] == ';')
-                            {
-                                result += "cout << (" + var + "=random()) << ' ';\n";
-                                i++;
-                                break;
-                            }
-                            else
-                            {
-                                var += code[i];
-                            }
-                            i++;
-                        }
-                    }
-                    else
-                    {
-                        result += code[i];
-                    }
-                }
-                else
-                {
-                    result += code[i];
-                }
-            }
-            return result;
-        }
-
         string fileName, Code;
-        private string GenerateTestCase()
-        {
-            //MessageBox.Show(ReverseCode(Code));
-            File.WriteAllText(fileName, ReverseCode(Code));
-            string randomExe = randomGenerated.Compile(fileName);
-            string input = randomGenerated.Run(randomExe, "");
-            File.Delete(randomExe);
-            return input;
-        }
-
         private async Task StressTest(string bruteFile, string optimizedFile)
         {
             rtbOutput.ForeColor = Color.Gray;
@@ -164,12 +55,12 @@ namespace StressTester
             {
                 //testing 100 inputs
                 AppendOutput("Running on test " + i + " ...\n");
-                string input = GenerateTestCase();
-                string outputBrute = await Task.Run(() => test.Run(bruteFile, input));
-                string outputOpt = await Task.Run(() => test.Run(optimizedFile, input));
+                string input = randomGenerated.GenerateTestCase(rtbBrute.Text);
+                string outputBrute = await Task.Run(() => language.Run(bruteFile, input));
+                string outputOpt = await Task.Run(() => language.Run(optimizedFile, input));
                 outputBrute = outputBrute.Trim();
                 outputOpt = outputOpt.Trim();
-                if(outputBrute != outputOpt)
+                if(outputBrute+"11" != outputOpt)
                 {
                     rtbOutput.Clear();
                     rtbOutput.ForeColor = Color.Red;
@@ -177,6 +68,7 @@ namespace StressTester
                     AppendOutput("Input:\n" + input + "\n");
                     AppendOutput("Brute Output:\n" + outputBrute + "\n");
                     AppendOutput("Optimized Output:\n" + outputOpt + "\n");
+                    button1.Enabled = true;
                     return;
                 }
                 
@@ -184,17 +76,19 @@ namespace StressTester
             rtbOutput.Clear();
             rtbOutput.ForeColor = Color.Green;
             AppendOutput("All tests passed!");
+            button1.Enabled = true;
         }
         private async void button1_Click(object sender, EventArgs e)
         {
+            button1.Enabled = false;
             rtbOutput.ForeColor = Color.Gray;
             rtbOutput.Clear();
             string bruteCode = rtbBrute.Text;     // Brute force code textbox
             string optCode = rtbOptimized.Text;   // Optimized code textbox
-            string language = comboLanguage.SelectedItem.ToString();
+            string language2 = comboLanguage.SelectedItem.ToString();
             Code = bruteCode;
             
-            if (string.IsNullOrWhiteSpace(bruteCode) || string.IsNullOrWhiteSpace(optCode) || language == null)
+            if (string.IsNullOrWhiteSpace(bruteCode) || string.IsNullOrWhiteSpace(optCode) || language2 == null)
             {
                 MessageBox.Show("Please paste both codes and select a language!");
                 return;
@@ -209,25 +103,20 @@ namespace StressTester
                 //if some process crash, program will work property
                 string brute = Guid.NewGuid().ToString();
                 string opt = Guid.NewGuid().ToString();
-                string rndm = Guid.NewGuid().ToString();
 
                 if(comboLanguage.Text == "C++")
                 {
                     brute += ".cpp";
                     opt += ".cpp";
-                    rndm += ".cpp";
                     bruteFile = Path.Combine(Path.GetTempPath(), brute);
                     optimizedFile = Path.Combine(Path.GetTempPath(), opt);
-                    fileName = Path.Combine(Path.GetTempPath(), rndm);
                 }
                 else if(comboLanguage.Text == "Python")
                 {
                     brute += ".py";
                     opt += ".py";
-                    rndm += ".py";
                     bruteFile = Path.Combine(Path.GetTempPath(), brute);
                     optimizedFile = Path.Combine(Path.GetTempPath(), opt);
-                    fileName = Path.Combine(Path.GetTempPath(), rndm);
                 }
                 else
                 {
@@ -241,20 +130,20 @@ namespace StressTester
                 File.WriteAllText(optimizedFile, optCode);
 
                 //compile and convert to exe file 
-                test = new CppRunner();
+                language = new CppRunner();
                 randomGenerated = new CppRunner();
                 if(comboLanguage.Text == "C++")
                 {
-                    test = new CppRunner();
+                    language = new CppRunner();
                     randomGenerated = new CppRunner();
                 }
                 else if (comboLanguage.Text == "Python")
                 {
-                    test = new PythonRunner();
+                    language = new PythonRunner();
                     randomGenerated = new PythonRunner();
                 }
-                 string bruteExe = test.Compile(bruteFile);
-                 string optExe = test.Compile(optimizedFile);
+                 string bruteExe = language.Compile(bruteFile);
+                 string optExe = language.Compile(optimizedFile);
 
                  await StressTest(bruteExe, optExe);
 

@@ -10,5 +10,7 @@ namespace StressTester
     {
         public abstract string Compile(string file);
         public abstract string Run(string exeFile, string input);
+
+        public abstract string GenerateTestCase(string code);
     }
 }
